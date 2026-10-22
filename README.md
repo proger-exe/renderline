@@ -4,9 +4,19 @@
 [![Renderline — Telegram на входе. Готовое видео на выходе.](docs/portfolio/card.png)](docs/portfolio/card.svg)
 <!-- portfolio-card:end -->
 
-Describe a vertical video in Telegram, get it rendered. Users upload clips, build a timeline of segments (`asset + in + out` in seconds), add subtitle lines, background music, sound effects and text overlays; a worker assembles the result with FFmpeg and sends it back. No video editor involved.
+Собрать вертикальное видео через диалог в Telegram: загрузить клипы, выбрать фрагменты, добавить субтитры и музыку, затем отправить задачу на рендер. Renderline передаёт сборку отдельному FFmpeg-воркеру и возвращает готовый файл в чат.
 
-## How it works
+Сценарий рассчитан на монтаж из заданных материалов. Пользователь явно задаёт начало и конец каждого фрагмента; поверх дорожки можно добавить текст, фоновую музыку и звуковые эффекты по временным меткам.
+
+## От диалога к обработке видео
+
+Бот проводит пользователя по шагам, API хранит проект и его материалы, RabbitMQ передаёт задание воркеру. Воркер строит граф фильтров FFmpeg: обрезка и склейка, формат 9:16, ASS-субтитры и сведение звука. Результат сохраняется в MP4, статус проекта обновляется.
+
+В репозитории можно оценить разделение интерактивного бота и длительной обработки файлов. Публичный демобот пока не подключён; для запуска нужны собственный Telegram-токен и сервисы из Compose.
+
+Обсудить похожий проект: [sh3l.beer](https://sh3l.beer).
+
+## Архитектура
 
 ```
 Telegram bot ──► FastAPI (projects, assets, timeline, subtitles, audio, overlays, render)
@@ -15,12 +25,12 @@ Telegram bot ──► FastAPI (projects, assets, timeline, subtitles, audio, ov
                  RabbitMQ queue ──► render worker (ffmpeg, libass subtitles) ──► storage/output
 ```
 
-- **bot/**: aiogram 3 FSM flow: project → assets → segments → subtitles → audio → render.
-- **api/**: REST layer the bot talks to; also usable directly (`/docs`).
-- **worker/**: consumes `render_tasks`, builds the FFmpeg filter graph (trim, concat, 9:16 scaling, ASS subtitles, BGM mix, SFX at timestamps, text overlays), writes MP4, updates project status.
-- **database/**: models and migrations.
+- `bot/`: сценарий на aiogram 3 FSM от создания проекта до отправки на рендер.
+- `api/`: REST API для бота и прямых запросов; описание доступно в `/docs`.
+- `worker/`: обработка очереди `render_tasks`, сборка фильтров FFmpeg и запись результата.
+- `database/`: модели и миграции.
 
-## Run
+## Запуск
 
 ```bash
 cp .env.example .env     # set TELEGRAM_BOT_TOKEN
@@ -28,18 +38,18 @@ docker compose up -d --build
 # API docs: http://127.0.0.1:8000/docs
 ```
 
-Five containers: postgres, rabbitmq, api (runs migrations on start), bot, worker. Uploaded assets and renders live in `./storage`.
+Compose запускает пять контейнеров: postgres, rabbitmq, api, bot и worker. API выполняет миграции при старте. Загруженные материалы и готовые видео хранятся в `./storage`.
 
-Local without Docker: run Postgres + RabbitMQ, point `.env` at them, then `alembic upgrade head`, `uvicorn api.main:app`, `python bot/main.py`, `python worker/main.py`.
+Для локального запуска без Docker поднимите Postgres и RabbitMQ, укажите их адреса в `.env`, затем выполните `alembic upgrade head` и запустите `uvicorn api.main:app`, `python bot/main.py`, `python worker/main.py`.
 
-## Tests
+## Проверки
 
 ```bash
 pytest -q
 ```
 
-Spec with the full feature list: `docs/spec.md` (RU).
+Полное описание функций находится в `docs/spec.md`.
 
-## License
+## Лицензия
 
 MIT
