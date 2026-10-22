@@ -1,7 +1,7 @@
 # Renderline
 
 <!-- portfolio-card:start -->
-[![sh3lby.code — нейтральная обложка](docs/portfolio/card.png)](docs/portfolio/card.svg)
+[![Renderline — Telegram на входе. Готовое видео на выходе.](docs/portfolio/card.png)](docs/portfolio/card.svg)
 <!-- portfolio-card:end -->
 
 Describe a vertical video in Telegram, get it rendered. Users upload clips, build a timeline of segments (`asset + in + out` in seconds), add subtitle lines, background music, sound effects and text overlays; a worker assembles the result with FFmpeg and sends it back. No video editor involved.
